@@ -6,11 +6,11 @@ void encode(char original[], char passwd[], char encoded[]);
 int main(){
     char original[100];
     char password[100];
-    char encoded[100];
+    char encoded[100];      
     printf("Enter your message: ");
-    fgets(original, 100, stdin);
+    fgets(original, sizeof(original), stdin);
     printf("Enter a password: ");
-    fgets(password, 100, stdin);
+    fgets(password, sizeof(password), stdin);
     encode(original, password, encoded);
     printf("Your encoded message: %s", encoded);
 }
