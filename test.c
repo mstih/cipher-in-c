@@ -1,89 +1,120 @@
 #include <stdio.h>
+#include <string.h>
 
 void encode(char original[], char passwd[], char encoded[]);
 
-
-int main(){
+int main()
+{
     char original[100];
     char password[100];
-    char encoded[100];      
+    char encoded[100];
+
     printf("Enter your message: ");
     fgets(original, sizeof(original), stdin);
+    original[strcspn(original, "\n")] = '\0';
+
     printf("Enter a password: ");
     fgets(password, sizeof(password), stdin);
+    password[strcspn(password, "\n")] = '\0'; // To remove newline char
+
     encode(original, password, encoded);
     printf("Your encoded message: %s", encoded);
+
+    return 0;
 }
 
-void encode(char original[], char passwd[], char encoded[]){
-    //makes an array of characters, including numbers, lowercase letters and uppercase letters, mixed positions with eachother.
-    int characters[62]; 
-    int number = 57;
-    for (int i = 1; i < 10; i+=2){
-        characters[i] = number;
-        number--;
-    }
-    for (int i = 60; i > 51; i-=2){
-        characters[i] = number;
-        number--;
-    }
-    int lower_case = 97;
-    for (int i = 0; i < 51; i+=2){
-        characters[i] = lower_case;
-        lower_case++;
-    }
-    int upper_case = 65;
-    for(int i = 61; i > 10; i-=2){
-        characters[i] = upper_case;
-        upper_case++;
+void encode(char original[], char passwd[], char encoded[])
+{
+    // Handle empty case
+    if (strlen(passwd) == 0)
+    {
+        strcpy(encoded, original);
+        return;
     }
 
-    //makes an array with first 10 positions being numbers, then uppercase letters and after that lowercase letters.
-    int array[61];
-    int idx_num = 48;
-    for(int i = 0; i<10; i++){
-        array[i] = idx_num;
-        idx_num++;
+    // Build canonical set for a-z, A-Z and 0-9
+    char canonical[62];
+    for (int i = 0; i < 10; i++)
+    {
+        canonical[i] = '0' + i;
+    }
+    for (int i = 0; i < 26; i++)
+    {
+        canonical[10 + i] = 'A' + i;
+    }
+    for (int i = 0; i < 26; i++)
+    {
+        canonical[36 + i] = 'a' + i;
     }
 
-    int idx_uppercase = 65;
-    for(int i = 10; i < 37; i++){
-        array[i] = idx_uppercase;
-        idx_uppercase++;
+    // Mixed char set build
+    char mixed[62];
+    char number = '9';
+    for (int i = 1; i < 10; i += 2)
+    {
+        mixed[i] = number--;
+    }
+    for (int i = 60; i > 51; i -= 2)
+    {
+        mixed[i] = number--;
+    }
+    char lower_case = 'a';
+    for (int i = 0; i < 51; i += 2)
+    {
+        mixed[i] = lower_case++;
+    }
+    char upper_case = 'A';
+    for (int i = 61; i > 10; i -= 2)
+    {
+        mixed[i] = upper_case++;
     }
 
-    int idx_lowercase = 97;
-    for(int i = 37; i<62; i++){
-        array[i] = idx_lowercase;
-        idx_lowercase++;
+    // Reverse table lookup (char to index)
+    int reverse[256];
+    for (int i = 0; i < 256; i++)
+    {
+        reverse[i] = -1; // Set all to invalid
+    }
+    for (int i = 0; i < 62; i++)
+    {
+        reverse[(unsigned char)canonical[i] = i];
     }
 
-    //main encoding loop
-    char current_char;
-    char current_passwd_char;
-    int index = 0;
     int passwd_index = 0;
-    while(original[index + 1] != '\0'){
-        current_char = original[index]; //defines the current character of original message
-        if(current_char != ' '){
-            if(passwd[passwd_index + 1 ] != '\0'){ //defines the current character of password
-                current_passwd_char = passwd[passwd_index];
-                passwd_index++; 
-            }else{ //if password is shorter than the message it repeats the password until needed
-                current_passwd_char = passwd[passwd_index];
-                passwd_index = 0;
-            }
-
-            int difference = array[current_char] - array[current_passwd_char]; //finds a difference between position of message character and password character
-            if (difference < 0){ //if difference is negative it changes it to positive
-                difference = (-1)*difference;
-            }   
-            //printf("Password char: %i, Character char: %i, Difference: %i\n", current_passwd_char, current_char, difference);
-
-            encoded[index] = characters[difference]; //finds character in mixed array at position of difference and encodes first character as this character from mixed array
-        }else{
-            encoded[index] = original[index];
+    int passwd_len = strlen(passwd);
+    for (int i = 0; original[i] != '\0'; i++)
+    {
+        if (original[i] == ' ')
+        {
+            encoded[i] = ' ';
         }
-        index++;
+        else
+        {
+            // get the next char
+            char p_char = passwd[passwd_index];
+            passwd_index = (passwd_index + 1) % passwd_len;
+
+            // find indexes for it
+            int idx_char = reverse[(unsigned char)original[i]];
+            int idx_pass = reverse[(unsigned char)p_char];
+
+            if (idx_char == -1 || idx_pass == -1)
+            {
+                // if invalid then it is the same
+                encoded[i] = original[i];
+            }
+            else
+            {
+                // calc the absolute difference
+                int diff = idx_char - idx_pass;
+                if (diff < 0)
+                    diff = -diff;
+
+                // encode from mixed set
+                encoded[i] = mixed[diff];
+            }
+        }
     }
+    // finish the string with \0
+    encoded[strlen(original)] = '\0';
 }
